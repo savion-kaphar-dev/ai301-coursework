@@ -1,22 +1,10 @@
 # Unit 2 — Claim and Reproduce
 
-Path: `beat-1-sandbox/unit-2/reproduction.md`
-
-Record of your claim and reproduction on the issue you chose in Unit 1, and of the
-evaluation runs that produced `eval-run.txt`. This file is graded at the path above; a copy
-kept anywhere else in the repository is not read.
-
-Complete every labelled field below. Each is graded on its own; content placed under the wrong
-label is not graded.
-
----
-
 ## Your identity upstream
 
 **GitHub username**
 
-[Your GitHub username, exactly as it appears on your profile — no `@`, no profile URL. Your
-comments upstream are identified by this name.]
+savion-kaphar-dev
 
 ---
 
@@ -24,48 +12,95 @@ comments upstream are identified by this name.]
 
 **Claim comment**
 
-[Link to the comment where you claimed the issue. Use the comment's own permalink, not the
-issue page on its own. **Then paste the text of that comment underneath the link** — the
-pasted text is what this field is graded on, so copy across what you actually posted.]
+[CLAIM COMMENT](https://github.com/codepath/pathreview-ai301-fa26-howard/issues/68#issuecomment-6071339230)
+
+Thanks for filing this. I'd like to work on it.
+
+The issue reports that `KeywordSearcher.index([])` raises a `ZeroDivisionError` from inside rank-bm25 when the empty tokenized corpus is passed to `BM25Okapi`, while `search()` already handles the empty case by returning an empty list. The covering test in `tests/unit/test_keyword_search.py` is currently marked `xfail` (H-01).
+
+My next step is to set up the project locally following the repo's docs, then try to reproduce this two ways: by running the xfail-marked test without the marker, and by calling `index([])` directly. Realistically, I'll post a repro report here once I have the project running, with my environment (Python and rank-bm25 versions), the exact steps, and the output I observe, including the full traceback if it does raise.
+
+If I can reproduce it, I intend to fix `index()` for the empty corpus and remove the xfail marker in the same pull request, as the issue asks.
 
 **Reproduction comment**
 
-[Link to the comment where you posted your reproduction. It must record the environment
-(OS, relevant versions, code state), steps a stranger could follow, and what you observed.
-**Then paste the text of that comment underneath the link** — the pasted text is what this
-field is graded on, so copy across what you actually posted.]
+[REPRO COMMENT](https://github.com/codepath/pathreview-ai301-fa26-howard/issues/68#issuecomment-6319080254)
+
+Reproduced issue #68: calling `KeywordSearcher.index([])` crashes with a `ZeroDivisionError`. With an empty corpus, rank-bm25 tries to find the average document length by dividing the total word count by the number of documents (0), and `index()` passes the empty list in without checking it first.
+
+**Environment:** Python 3.14.7 · rank-bm25 0.2.2 · pytest 9.1.1 · macOS · commit `99673c7`
+
+**Steps, From a clone of my fork:**
+clone → check out `99673c7` → set up the venv per the README → run:
+```
+pytest tests/unit/test_keyword_search.py --runxfail
+```
+
+**Expected:** `index([])` returns without raising, consistent with `search()` returning an empty list on empty input
+**Actual:** `ZeroDivisionError: division by zero` raised inside rank-bm25 (1 failed, 16 passed)
+
+```
+$ pytest tests/unit/test_keyword_search.py --runxfail
+>       searcher.index([])
+E       ZeroDivisionError: division by zero
+```
+
+<details><summary>Full pytest output</summary>
+
+```
+collected 17 items
+
+tests/unit/test_keyword_search.py ........F........                    [100%]
+
+=================================== FAILURES ===================================
+_____________________ TestKeywordSearcher.test_empty_index _____________________
+
+    def test_empty_index(self, searcher):
+        """Test searching on empty index."""
+>       searcher.index([])
+
+tests/unit/test_keyword_search.py:140:
+rag/retriever/keyword_search.py:25: in index
+    self.bm25 = BM25Okapi(tokenized_corpus)
+.venv/lib/python3.14/site-packages/rank_bm25.py:83: in __init__
+    super().__init__(corpus, tokenizer)
+.venv/lib/python3.14/site-packages/rank_bm25.py:27: in __init__
+    nd = self._initialize(corpus)
+
+self = <rank_bm25.BM25Okapi object at 0x10815c050>, corpus = []
+
+>       self.avgdl = num_doc / self.corpus_size
+E       ZeroDivisionError: division by zero
+
+.venv/lib/python3.14/site-packages/rank_bm25.py:52: ZeroDivisionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_keyword_search.py::TestKeywordSearcher::test_empty_index - ZeroDivisionError: division by zero
+========================= 1 failed, 16 passed in 0.34s =========================
+```
+
+</details>
+
+Next, I'll open a PR from my fork that makes `index()` handle an empty corpus and removes the `xfail` marker on `test_empty_index`.
 
 ## Eval iterations
 
-Answer all four sections. Quote source text directly; paraphrase does not satisfy these
-fields.
-
 **Run history**
 
-[The agreement score of each run you did, in order. A single run is a complete answer if
-only one run occurred. **The last score in your list must match the agreement line in the
-`eval-run.txt` you committed** — that file is the record of your final run.]
+1. 19/20 (2026-10-08, bar 18/20, PASS)
+2. 20/20 (2026-10-21, bar 18/20, PASS), final run, matches the committed eval-run.txt
 
 **Package analysis**
 
-[Pick one scored package (`pkg-01` through `pkg-20` — the four `calib-` packages are never
-scored). Name it by id, say what your rubric decided and what the gold label said, and
-explain why your rubric read it that way.]
+pkg-09. My rubric decided `accept` in the final run; the gold label is `accept` (clear-accept). The gold note reads: "honest cannot-reproduce: real attempt at the argument-size reordering with marker-order artifacts, names what differed (uniform name lengths, 2 MiB ARG_MAX) and what a triggering setup likely needs".
+
+My rubric read it as a pass because of the Honest outcome check, which says "A cannot-reproduce that shows a real attempt and names what differed is a pass." pkg-09 didn't reproduce the bug, but it shows a real attempt with artifacts and names exactly what differed from the triggering setup, so it doesn't overclaim. In my first run the same package was rejected (failed: Honest outcome, Next step concrete), even though the rubric was unchanged (same rubric hash, fe8155963f030804, in both runs). That shows pkg-09 sits on the line between "honest cannot-reproduce" and "didn't reproduce," and the grading model can land on either side.
 
 **Check rationale**
 
-[Quote one check from the `rubric.md` you uploaded to `tools/repro-check/`, exactly as it reads now.
-Then say why it reads that way — what you revised to get there, or what you rejected in
-favour of it.]
+> **Next step concrete**: States a specific next step (what the author will try or fix next, or what a maintainer could check). Weight: preferred
+
+It's weighted `preferred` rather than `required` because a report can be complete proof without one. The environment, steps and artifact are what let a stranger check the bug. A next step makes the report more useful, but a strong reproduction shouldn't be rejected only for leaving it out. The "or what a maintainer could check" part is there so a cannot-reproduce report can still earn it, by pointing to what a triggering setup would need.
 
 **Trade-offs**
 
-[Every check gives something up. Any one of these is a complete answer: a package whose
-result it changes, a canary you re-ran with `--only`, a case you accept it will miss, or a
-stated reason nothing changed elsewhere. "Nothing changed, and here is how I know" earns
-the point in full when the reason follows.]
-
----
-
-Related paths: `eval-run.txt` in this directory; your skill's files in
-`tools/repro-check/`.
+Nothing in the skill changed between my two runs, and I know because the rubric hash is fe8155963f030804 in both, and skill/ is identical in the two commits (ecd39f1 and 88b3577). The one difference in results, pkg-09 flipping from reject to accept, came from run-to-run variation in the grading model, not from a revision. The trade-off I accept is that the Honest outcome check's "real attempt and names what differed" condition is a judgment call, so borderline cannot-reproduce packages like pkg-09 can flip between runs. My score can vary by one package on reruns even with the same rubric.
