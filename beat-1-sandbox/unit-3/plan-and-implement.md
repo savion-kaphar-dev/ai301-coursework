@@ -1,31 +1,16 @@
 # Unit 3 — Plan and Build
 
-Path: `beat-1-sandbox/unit-3/plan-and-implement.md`
-
-Record of your plan, the branch you built it on, and the evaluation runs that produced
-`eval-run.txt`. This file is graded at the path above; a copy kept anywhere else in the
-repository is not read.
-
-Complete every labelled field below. Each is graded on its own; content placed under the wrong
-label is not graded.
-
----
-
 ## Posted upstream
 
 **GitHub username**
 
-[Your GitHub username, exactly as it appears on your profile - no @, no
-profile URL. Your comment upstream is identified by this name, and it is
-the only thing that ties it to you. Several students may plan the same
-house issue, so this is what keeps their comments off your score and
-yours off theirs.]
+savion-kaphar-dev
 
 **Plan comment**
 
-[Link to the comment where you posted your plan on the issue. Use the comment's own
-permalink. **Then paste the text of that comment underneath the link** — the pasted text is
-what this field is graded on, so copy across what you actually posted.]
+[PLAN](https://github.com/codepath/pathreview-ai301-fa26-howard/issues/68#issuecomment-6367078173)
+
+Following my repro above (commit 99673c7), here's my plan: add an empty-list check at the start of `KeywordSearcher.index()` in `rag/retriever/keyword_search.py`, so an empty `chunks` list resets the index and returns before it ever reaches `BM25Okapi`. `search()` already returns `[]` in that state, so the two will match. I'll also remove the `xfail` marker from `test_empty_index`. Per CONTRIBUTING.md I also checked `pyproject.toml` for related suppressions; there's no mypy override for `keyword_search`, so the xfail marker is the only one. To check it, that test currently fails with `ZeroDivisionError` under `--runxfail`; after the change it should pass as a normal test, with the other 16 tests in the file still passing. One thing I'm leaving out of scope: a non-empty list where every chunk's text is empty might also break BM25's scoring, but that's a separate case from this issue, so I'll note it in the PR rather than fix it here. I’ll work on branch `fix/68-empty-index`. Happy to adjust if you’d prefer a different approach, and thanks for reviewing!
 
 ---
 
@@ -33,47 +18,52 @@ what this field is graded on, so copy across what you actually posted.]
 
 **Branch**
 
-[The name of the branch you built the change on, exactly as it appears in your fork. The
-naming shape is a type prefix, then the issue number, then a short description. **The issue
-number in the branch name must be the number of the issue you claimed** — a name carrying
-any other number does not satisfy this field.]
+fix/68-empty-index
 
 **Evidence**
 
-[Your Unit 2 reproduction steps re-run against the built change: the before, then the
-after. Paste both, including the commands you ran and their output.]
+Before (on `fix/68-empty-index`, before the change, running the Unit 2 repro command):
+
+```
+$ pytest tests/unit/test_keyword_search.py --runxfail
+FAILED tests/unit/test_keyword_search.py::TestKeywordSearcher::test_empty_index - ZeroDivisionError: division by zero
+1 failed, 16 passed in 0.48s
+```
+
+After (guard added to `KeywordSearcher.index()`, xfail marker removed):
+
+```
+$ pytest tests/unit/test_keyword_search.py
+17 passed in 0.30s
+```
 
 ## Eval iterations
 
-Answer all four sections. Quote source text directly; paraphrase does not satisfy these
-fields.
-
 **Run history**
 
-[The agreement score of each run you did, in order. A single run is a complete answer if
-only one run occurred. **The last score in your list must match the agreement line in the
-`eval-run.txt` you committed** — that file is the record of your final run.]
+1. 18/20
+2. 20/20
+3. 20/20 (final run, matches the committed eval-run.txt)
 
 **Package analysis**
 
-[Pick one scored package (`pkg-01` through `pkg-20` — the four `calib-` packages are never
-scored). Name it by id, say what your rubric decided and what the gold label said, and
-explain why your rubric read it that way.]
+pkg-20 (thread-convention). Gold label: reject. My rubric decided accept in run 1 and reject in my final run.
+
+In run 1, every check passed, and the comms check's evidence said: "package shows no AI use, so no disclosure is shown to be required (tension noted)." The repo's AI policy says all AI usage must be disclosed, stating the tool used and the extent of assistance, and the plan comment has no disclosure. My first comms check only said to check "any required AI disclosure," so the grader decided disclosure only applied if the package showed AI use. I added "Treat every package as AI-assisted work" and spelled out that when the policy explicitly requires disclosure, the comment must contain it with the details the policy names. After that, pkg-20 is rejected on the comms check, matching gold.
 
 **Check rationale**
 
-[Quote one check from the `rubric.md` you uploaded to `tools/plan-check/`, exactly as it reads now.
-Then say why it reads that way — what you revised to get there, or what you rejected in
-favour of it.]
+```
+| Comment fits thread and repo | The plan comment, read against the thread highlights (maintainer asks, decisions, prior attempts) and the repo-facts block (templates, contributing asks, AI policy). Treat every package as AI-assisted work. | The comment follows what maintainers asked for in the thread and what the repo's stated conventions require, and does not contradict a maintainer decision. If the AI policy explicitly requires disclosing AI use, the comment must contain that disclosure, including any details the policy names (such as the tool and the extent of assistance). A policy that only welcomes AI or asks for understanding requires nothing visible. Fail if a maintainer ask, a stated convention, or a required disclosure is missing or contradicted. | required |
+```
+
+It reads this way because my first version let pkg-20 through. The grader treated the disclosure rule as conditional on the package showing AI use. Adding "Treat every package as AI-assisted work" removes that loophole, and requiring "any details the policy names (such as the tool and the extent of assistance)" stops a vague one-word disclosure from passing a policy that asks for more. I kept the line "A policy that only welcomes AI or asks for understanding requires nothing visible" so the check doesn't fail repos whose policy asks for nothing.
 
 **Trade-offs**
 
-[Every check gives something up. Any one of these is a complete answer: a package whose
-result it changes, a canary you re-ran with `--only`, a case you accept it will miss, or a
-stated reason nothing changed elsewhere. "Nothing changed, and here is how I know" earns
-the point in full when the reason follows.]
+The same revision also loosened two checks for pkg-14, a clear-accept my rubric wrongly rejected: "Stranger could start" now accepts a named module plus a concrete way to locate the exact functions, and "Unknowns stated honestly" now accepts a diagnosis inferred from the repro's controls. Loosening risks passing plans that should be held, so I re-ran with `--only pkg-14,pkg-20,pkg-04,pkg-10,pkg-17,pkg-01,pkg-02`:
+- canaries pkg-10 and pkg-17 (unbuildable) for the looser "Stranger could start"
+- canary pkg-01 (wrong-cause) for the looser "Unknowns"
+- canaries pkg-04 (the other thread-convention) and pkg-02 (clear-accept) for the stricter comms check
 
----
-
-Related paths: `plan.md` and `eval-run.txt` in this directory; your skill's files in
-`tools/plan-check/`.
+All 7 agreed, and the next full run was 20/20. One case I accept it may miss: my procedure doesn't say to read repo docs the package doesn't mention. In live mode, one plan-check run passed my plan and a later run caught that CONTRIBUTING.md also asks to remove related suppressions from `pyproject.toml`, so whether that doc gets read can vary between runs.
