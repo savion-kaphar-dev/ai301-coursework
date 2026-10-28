@@ -1,61 +1,38 @@
 # Unit 4 — Test and Submit
 
-Path: `beat-1-sandbox/unit-4/pull-request.md`
-
-Record of the pull request you opened against the Path Review repo, and of the evaluation
-runs that produced `eval-run.txt`. This file is graded at the path above; a copy kept
-anywhere else in the repository is not read.
-
-Complete every labelled field below. Each is graded on its own; content placed under the wrong
-label is not graded.
-
----
-
 ## Your pull request
 
 **Pull request**
 
-[Link to the pull request you opened. It must be the pull request's own page on the Path
-Review repo, not your fork's branch page.]
+https://github.com/codepath/pathreview-ai301-fa26-howard/pull/93
 
 **Branch**
 
-[The name of the branch the pull request comes from, exactly as it appears in your fork.
-The naming shape is a type prefix, then the issue number, then a short description. **The
-issue number in the branch name must be the number of the issue the pull request fixes** —
-a name carrying any other number does not satisfy this field.]
+fix/68-empty-index
 
 ## Eval iterations
 
-Answer all four sections. Quote source text directly; paraphrase does not satisfy these
-fields.
-
 **Run history**
 
-[The agreement score of each run you did, in order. A single run is a complete answer if
-only one run occurred. **The last score in your list must match the agreement line in the
-`eval-run.txt` you committed** — that file is the record of your final run.]
+1. 19/20
+2. 20/20 (final run, matches the committed eval-run.txt)
 
 **Package analysis**
 
-[Pick one scored package (`pkg-01` through `pkg-20` — the four `calib-` packages are never
-scored). Name it by id, say what your rubric decided and what the gold label said, and
-explain why your rubric read it that way.]
+pkg-16 (clear-accept). Gold label: accept. My rubric decided reject in run 1 and accept in my final run.
+
+In run 1 it failed two checks. "Description matches diff" failed with the evidence: "The description's After output 'Failed to load image ./notanimage.tar: docker load: invalid tar header' can't come from the diff, which prints 'Failed to load image' plus 'loading images: <profile>: <err>' and never names the image." "Repo checks run" failed with: "Only the bare assertion 'go test ./pkg/minikube/machine/... ./cmd/... passes' with no output shown and no not-run disclosure." The gold note calls it an "honestly disclosed shortfall": the image-load path fails loudly with before/after transcripts, and the start-path behavior is deliberately deferred with the maintainer discussion cited.
+
+My rubric read it as a reject because both checks were too literal. The first treated a small difference in a pasted error message as drift, when every claim about what the change does was true of the diff. The second required check output to be shown, when the PR named the exact command it ran and its result alongside a full before/after transcript. I revised both: "Description matches diff" now judges material claims about the change, not the wording of quoted output, and "Repo checks run" accepts a named check with a specific stated result. After that, pkg-16 was accepted, matching gold.
 
 **Check rationale**
 
-[Quote one check from the `rubric.md` you uploaded to `tools/pr-precheck/`, exactly as it reads now.
-Then say why it reads that way — what you revised to get there, or what you rejected in
-favour of it.]
+```
+<PASTE THE "Repo checks run" ROW FROM tools/pr-precheck/rubric.md, WORD FOR WORD>
+```
+
+It reads this way because my first version required the repo's check output to be shown, which rejected pkg-16 even though it named the exact command (`go test ./pkg/minikube/machine/... ./cmd/...`) and its result next to a full before/after transcript. I loosened it to accept "the specific repo checks it ran (the command or target...) and their outcome, either with output shown or as a specific stated result." I rejected loosening it all the way to any claim of passing tests: the fail condition still catches the generic "tests pass" or "CI is green" with no check named, which is what the not-tested packages look like.
 
 **Trade-offs**
 
-[Every check gives something up. Any one of these is a complete answer: a package whose
-result it changes, a canary you re-ran with `--only`, a case you accept it will miss, or a
-stated reason nothing changed elsewhere. "Nothing changed, and here is how I know" earns
-the point in full when the reason follows.]
-
----
-
-Related paths: `eval-run.txt` in this directory; your skill's files in
-`tools/pr-precheck/`.
+Loosening "Repo checks run" risks letting not-tested packages through, and loosening "Description matches diff" risks letting silent-drift packages through. So before the confirming run I re-ran with `--only pkg-16,pkg-04,pkg-07,pkg-10,pkg-14,pkg-03,pkg-06`, using all four not-tested packages (pkg-04, pkg-07, pkg-10, pkg-14) as canaries for the repo-checks change and two silent-drift packages (pkg-03, pkg-06) for the description change. They all still agreed, and the confirming full run was 20/20 with not-tested at 4/4 and silent-drift at 4/4. The case I accept it may miss: a PR that names a real check command and claims it passed without having actually run it. My rubric now trusts a specific stated result, so it can't catch that kind of false claim from the package alone.
